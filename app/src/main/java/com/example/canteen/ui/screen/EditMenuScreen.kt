@@ -11,12 +11,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import androidx.compose.ui.layout.ContentScale
 
 import coil.compose.rememberAsyncImagePainter
 
@@ -29,34 +29,50 @@ fun EditMenuScreen(
     navController: NavController,
     id: Int
 ) {
-    val context = LocalContext.current
-    val db = DataHelper(context)
 
-    var name by remember { mutableStateOf("") }
-    var seller by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    // 🔥 DATABASE
+    val db = remember {
+        DataHelper(context)
+    }
+
+    var name by remember {
+        mutableStateOf("")
+    }
+
+    var price by remember {
+        mutableStateOf("")
+    }
 
     // 🔥 IMAGE
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
+
         imageUri = uri
     }
 
     // 🔥 LOAD DATA
     LaunchedEffect(Unit) {
+
         val menu = db.getMenuById(id)
 
         if (menu != null) {
+
             name = menu.name
-            seller = menu.place
             price = menu.price
 
             imageUri =
-                if (menu.imageUri.isNotEmpty()) Uri.parse(menu.imageUri)
-                else null
+                if (menu.imageUri.isNotEmpty()) {
+                    Uri.parse(menu.imageUri)
+                } else {
+                    null
+                }
         }
     }
 
@@ -70,32 +86,36 @@ fun EditMenuScreen(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        Text("Edit Menu", fontSize = 24.sp)
+        Text(
+            text = "Edit Menu",
+            fontSize = 24.sp
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // 🔥 NAMA MENU
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
-            label = { Text("Nama Menu") },
+            onValueChange = {
+                name = it
+            },
+            label = {
+                Text("Nama Menu")
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = seller,
-            onValueChange = { seller = it },
-            label = { Text("Nama Penjual") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
+        // 🔥 HARGA
         OutlinedTextField(
             value = price,
-            onValueChange = { price = it },
-            label = { Text("Harga") },
+            onValueChange = {
+                price = it
+            },
+            label = {
+                Text("Harga")
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -103,15 +123,20 @@ fun EditMenuScreen(
 
         // 🔥 GANTI GAMBAR
         Button(
-            onClick = { launcher.launch("image/*") },
+            onClick = {
+                launcher.launch("image/*")
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
+
             Text("Ganti Gambar")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // 🔥 PREVIEW IMAGE
         imageUri?.let {
+
             Image(
                 painter = rememberAsyncImagePainter(it),
                 contentDescription = null,
@@ -122,39 +147,64 @@ fun EditMenuScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 🔥 UPDATE
+        // 🔥 UPDATE MENU
         Button(
             onClick = {
 
-                if (name.isEmpty() || seller.isEmpty() || price.isEmpty()) {
-                    Toast.makeText(context, "Isi semua field", Toast.LENGTH_SHORT).show()
+                if (
+                    name.isEmpty() ||
+                    price.isEmpty()
+                ) {
+
+                    Toast.makeText(
+                        context,
+                        "Isi semua field",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     return@Button
                 }
 
-                db.updateMenuById(
-                    id,
-                    name,
-                    seller,
-                    price,
-                    imageUri?.toString() ?: ""
-                )
+                // 🔥 AMBIL DATA LAMA
+                val oldMenu = db.getMenuById(id)
 
-                Toast.makeText(context, "Menu berhasil diupdate 🎉", Toast.LENGTH_SHORT).show()
+                if (oldMenu != null) {
 
-                navController.popBackStack()
+                    db.updateMenuById(
+                        id,
+                        name,
+                        price,
+                        imageUri?.toString() ?: "",
+                        oldMenu.canteenId
+                    )
+
+                    Toast.makeText(
+                        context,
+                        "Menu berhasil diupdate 🎉",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    navController.popBackStack()
+                }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = YellowPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
+
             Text("Update")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = {
-            navController.popBackStack()
-        }) {
+        TextButton(
+            onClick = {
+                navController.popBackStack()
+            }
+        ) {
+
             Text("Kembali")
         }
     }

@@ -44,13 +44,26 @@ fun RegisterScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        Text("Canteen", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "Canteen",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold
+        )
 
         Spacer(modifier = Modifier.height(40.dp))
 
         InputField(name, { name = it }, "Name")
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         InputField(email, { email = it }, "Email")
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         InputField(password, { password = it }, "Password", true)
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         InputField(confirm, { confirm = it }, "Confirm Password", true)
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -58,43 +71,82 @@ fun RegisterScreen(navController: NavController) {
         Button(
             onClick = {
 
-                if (name.isEmpty() || email.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-                    Toast.makeText(context, "Isi semua field", Toast.LENGTH_SHORT).show()
+                if (
+                    name.isEmpty() ||
+                    email.isEmpty() ||
+                    password.isEmpty() ||
+                    confirm.isEmpty()
+                ) {
+
+                    Toast.makeText(
+                        context,
+                        "Isi semua field",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     return@Button
                 }
 
                 if (password != confirm) {
-                    Toast.makeText(context, "Password tidak sama", Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        context,
+                        "Password tidak sama",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     return@Button
                 }
 
-                // ✅ FIX UTAMA DI SINI
-                val success = db.register(email, password, name)
+                // 🔥 REGISTER USER BARU
+                val success = db.register(
+                    email,
+                    password,
+                    name,
+                    "buyer"
+                )
 
                 if (success) {
-                    Toast.makeText(context, "Register berhasil 🎉", Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        context,
+                        "Register berhasil 🎉",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                     navController.navigate("login") {
-                        popUpTo("register") { inclusive = true }
+                        popUpTo("register") {
+                            inclusive = true
+                        }
                     }
 
                 } else {
-                    Toast.makeText(context, "Email sudah terdaftar", Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        context,
+                        "Email sudah terdaftar",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = YellowPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
+
             Text("Sign Up")
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Row {
+
             Text("Already have an account? ")
+
             Text(
-                "Login",
+                text = "Login",
                 color = YellowPrimary,
                 modifier = Modifier.clickable {
                     navController.navigate("login")

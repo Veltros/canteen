@@ -6,43 +6,96 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 class DataHelper(context: Context) :
-    SQLiteOpenHelper(context, "canteen.db", null, 4) {
+    SQLiteOpenHelper(context, "canteen.db", null, 7) {
 
     override fun onCreate(db: SQLiteDatabase) {
 
+        // =========================
+        // 👤 USERS
+        // =========================
         db.execSQL(
             "CREATE TABLE users (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "email TEXT UNIQUE," +
                     "password TEXT," +
-                    "name TEXT)"
+                    "name TEXT," +
+                    "role TEXT" +
+                    ")"
         )
 
+        // =========================
+        // 🏪 CANTEENS
+        // =========================
+        db.execSQL(
+            "CREATE TABLE canteens (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "name TEXT," +
+                    "ownerId INTEGER" +
+                    ")"
+        )
+
+        // =========================
+        // 📝 SELLER REQUESTS
+        // =========================
+        db.execSQL(
+            "CREATE TABLE seller_requests (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "userId INTEGER," +
+                    "canteenName TEXT," +
+                    "description TEXT," +
+                    "status TEXT" +
+                    ")"
+        )
+
+        // =========================
+        // 🍔 MENU
+        // =========================
         db.execSQL(
             "CREATE TABLE menu (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "canteenId INTEGER," +
                     "name TEXT," +
-                    "place TEXT," +
                     "price TEXT," +
-                    "imageUri TEXT)"
+                    "imageUri TEXT" +
+                    ")"
+        )
+
+        // 🔥 ADMIN DEFAULT
+        db.execSQL(
+            "INSERT INTO users (email, password, name, role) VALUES (" +
+                    "'admin@gmail.com'," +
+                    "'admin123'," +
+                    "'Admin'," +
+                    "'admin'" +
+                    ")"
         )
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 4) {
-            try {
-                db.execSQL("ALTER TABLE menu ADD COLUMN imageUri TEXT")
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+    override fun onUpgrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int
+    ) {
+
+        db.execSQL("DROP TABLE IF EXISTS users")
+        db.execSQL("DROP TABLE IF EXISTS canteens")
+        db.execSQL("DROP TABLE IF EXISTS seller_requests")
+        db.execSQL("DROP TABLE IF EXISTS menu")
+
+        onCreate(db)
     }
 
     // =========================
     // 🔐 USER
     // =========================
 
-    fun register(email: String, password: String, name: String): Boolean {
+    fun register(
+        email: String,
+        password: String,
+        name: String,
+        role: String
+    ): Boolean {
+
         val db = writableDatabase
 
         val check = db.rawQuery(
@@ -55,53 +108,113 @@ class DataHelper(context: Context) :
             return false
         }
 
+        check.close()
+
         val values = ContentValues().apply {
             put("email", email)
             put("password", password)
             put("name", name)
+            put("role", role)
         }
 
         db.insert("users", null, values)
+
         return true
     }
 
-    fun login(email: String, password: String): Boolean {
+    fun login(
+        email: String,
+        password: String
+    ): String? {
+
         val db = readableDatabase
 
         val cursor = db.rawQuery(
-            "SELECT * FROM users WHERE email=? AND password=?",
+            "SELECT role FROM users WHERE email=? AND password=?",
             arrayOf(email, password)
         )
 
-        val success = cursor.count > 0
+        var role: String? = null
+
+        if (cursor.moveToFirst()) {
+
+            role = cursor.getString(
+                cursor.getColumnIndexOrThrow("role")
+            )
+        }
+
         cursor.close()
-        return success
+
+        return role
     }
 
     fun getUserName(email: String): String {
+
+        val db = readableDatabase
+
+        val cursor = db.rawQuery(
+            "SELECT name FROM users WHERE email=?",
+            arrayOf(email)
+        )
+
         var name = "Guest"
 
-        try {
-            val db = readableDatabase
+        if (cursor.moveToFirst()) {
 
-            val cursor = db.rawQuery(
-                "SELECT name FROM users WHERE email=?",
-                arrayOf(email)
+            name = cursor.getString(
+                cursor.getColumnIndexOrThrow("name")
             )
-
-            if (cursor != null && cursor.moveToFirst()) {
-                val index = cursor.getColumnIndex("name")
-                if (index != -1 && !cursor.isNull(index)) {
-                    name = cursor.getString(index)
-                }
-            }
-
-            cursor?.close()
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return "Guest"
         }
+
+        cursor.close()
+
+        return name
+    }
+
+    // =========================
+    // 🏪 CANTEENS
+    // =========================
+
+    fun insertCanteen(
+        name: String,
+        ownerId: Int
+    ) {
+
+        val db = writableDatabase
+
+        val values = ContentValues().apply {
+            put("name", name)
+            put("ownerId", ownerId)
+        }
+
+        db.insert(
+            "canteens",
+            null,
+            values
+        )
+    }
+
+    fun getCanteenNameById(
+        id: Int
+    ): String {
+
+        val db = readableDatabase
+
+        val cursor = db.rawQuery(
+            "SELECT name FROM canteens WHERE id=?",
+            arrayOf(id.toString())
+        )
+
+        var name = ""
+
+        if (cursor.moveToFirst()) {
+
+            name = cursor.getString(
+                cursor.getColumnIndexOrThrow("name")
+            )
+        }
+
+        cursor.close()
 
         return name
     }
@@ -110,66 +223,85 @@ class DataHelper(context: Context) :
     // 🍔 MENU
     // =========================
 
-    fun insertMenu(name: String, place: String, price: String, imageUri: String) {
+    fun insertMenu(
+        canteenId: Int,
+        name: String,
+        price: String,
+        imageUri: String
+    ) {
+
         val db = writableDatabase
+
         val values = ContentValues().apply {
+            put("canteenId", canteenId)
             put("name", name)
-            put("place", place)
             put("price", price)
             put("imageUri", imageUri)
         }
-        db.insert("menu", null, values)
+
+        db.insert(
+            "menu",
+            null,
+            values
+        )
     }
 
     fun getAllMenu(): MutableList<MenuItem> {
+
         val list = mutableListOf<MenuItem>()
+
         val db = readableDatabase
 
-        val cursor = db.rawQuery("SELECT * FROM menu", null)
+        val cursor = db.rawQuery(
+            "SELECT * FROM menu",
+            null
+        )
 
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
+
             do {
 
-                val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
-
-                val nameIndex = cursor.getColumnIndex("name")
-                val name = if (nameIndex != -1 && !cursor.isNull(nameIndex)) {
-                    cursor.getString(nameIndex)
-                } else ""
-
-                val placeIndex = cursor.getColumnIndex("place")
-                val place = if (placeIndex != -1 && !cursor.isNull(placeIndex)) {
-                    cursor.getString(placeIndex)
-                } else ""
-
-                val priceIndex = cursor.getColumnIndex("price")
-                val price = if (priceIndex != -1 && !cursor.isNull(priceIndex)) {
-                    cursor.getString(priceIndex)
-                } else ""
-
-                val imageIndex = cursor.getColumnIndex("imageUri")
-                val imageUri = if (imageIndex != -1 && !cursor.isNull(imageIndex)) {
-                    cursor.getString(imageIndex)
-                } else ""
-
-                list.add(
-                    MenuItem(
-                        id = id,
-                        name = name,
-                        place = place,
-                        price = price,
-                        imageUri = imageUri
-                    )
+                val canteenId = cursor.getInt(
+                    cursor.getColumnIndexOrThrow("canteenId")
                 )
+
+                val item = MenuItem(
+
+                    id = cursor.getInt(
+                        cursor.getColumnIndexOrThrow("id")
+                    ),
+
+                    canteenId = canteenId,
+
+                    canteenName = getCanteenNameById(
+                        canteenId
+                    ),
+
+                    name = cursor.getString(
+                        cursor.getColumnIndexOrThrow("name")
+                    ),
+
+                    price = cursor.getString(
+                        cursor.getColumnIndexOrThrow("price")
+                    ),
+
+                    imageUri = cursor.getString(
+                        cursor.getColumnIndexOrThrow("imageUri")
+                    ) ?: ""
+                )
+
+                list.add(item)
 
             } while (cursor.moveToNext())
         }
 
-        cursor?.close()
+        cursor.close()
+
         return list
     }
 
     fun getMenuById(id: Int): MenuItem? {
+
         val db = readableDatabase
 
         val cursor = db.rawQuery(
@@ -179,43 +311,77 @@ class DataHelper(context: Context) :
 
         var menu: MenuItem? = null
 
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
 
-            val name = cursor.getString(cursor.getColumnIndexOrThrow("name")) ?: ""
-            val place = cursor.getString(cursor.getColumnIndexOrThrow("place")) ?: ""
-            val price = cursor.getString(cursor.getColumnIndexOrThrow("price")) ?: ""
-
-            val imageIndex = cursor.getColumnIndex("imageUri")
-            val imageUri = if (imageIndex != -1 && !cursor.isNull(imageIndex)) {
-                cursor.getString(imageIndex)
-            } else ""
+            val canteenId = cursor.getInt(
+                cursor.getColumnIndexOrThrow("canteenId")
+            )
 
             menu = MenuItem(
-                id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-                name = name,
-                place = place,
-                price = price,
-                imageUri = imageUri
+
+                id = cursor.getInt(
+                    cursor.getColumnIndexOrThrow("id")
+                ),
+
+                canteenId = canteenId,
+
+                canteenName = getCanteenNameById(
+                    canteenId
+                ),
+
+                name = cursor.getString(
+                    cursor.getColumnIndexOrThrow("name")
+                ),
+
+                price = cursor.getString(
+                    cursor.getColumnIndexOrThrow("price")
+                ),
+
+                imageUri = cursor.getString(
+                    cursor.getColumnIndexOrThrow("imageUri")
+                ) ?: ""
             )
         }
 
-        cursor?.close()
+        cursor.close()
+
         return menu
     }
 
-    fun updateMenuById(id: Int, name: String, place: String, price: String, imageUri: String) {
+    fun updateMenuById(
+        id: Int,
+        name: String,
+        price: String,
+        imageUri: String,
+        canteenId: Int
+    ) {
+
         val db = writableDatabase
+
         val values = ContentValues().apply {
+
+            put("canteenId", canteenId)
             put("name", name)
-            put("place", place)
             put("price", price)
             put("imageUri", imageUri)
         }
-        db.update("menu", values, "id=?", arrayOf(id.toString()))
+
+        db.update(
+            "menu",
+            values,
+            "id=?",
+            arrayOf(id.toString())
+        )
     }
 
     fun deleteMenu(id: Int) {
+
         val db = writableDatabase
-        db.delete("menu", "id=?", arrayOf(id.toString()))
+
+        db.delete(
+            "menu",
+            "id=?",
+            arrayOf(id.toString())
+        )
     }
 }

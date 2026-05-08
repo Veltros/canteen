@@ -11,16 +11,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.canteen.data.DataHelper
 import com.example.canteen.ui.component.InputField
 import com.example.canteen.ui.theme.GrayBg
 import com.example.canteen.ui.theme.YellowPrimary
-import com.example.canteen.data.DataHelper
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -30,8 +30,10 @@ fun LoginScreen(navController: NavController) {
 
     val context = LocalContext.current
 
-    // 🔥 FIX: pakai remember biar gak recreate terus
-    val db = remember { DataHelper(context) }
+    // 🔥 DATABASE
+    val db = remember {
+        DataHelper(context)
+    }
 
     Column(
         modifier = Modifier
@@ -51,51 +53,109 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        InputField(email, { email = it }, "Email")
-        InputField(password, { password = it }, "Password", true)
+        InputField(
+            email,
+            { email = it },
+            "Email"
+        )
+
+        InputField(
+            password,
+            { password = it },
+            "Password",
+            true
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = {
 
-                if (email.isEmpty() || password.isEmpty()) {
-                    Toast.makeText(context, "Isi semua field", Toast.LENGTH_SHORT).show()
+                if (
+                    email.isEmpty() ||
+                    password.isEmpty()
+                ) {
+
+                    Toast.makeText(
+                        context,
+                        "Isi semua field",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     return@Button
                 }
 
-                val success = db.login(email, password)
+                // 🔥 LOGIN SEKARANG RETURN ROLE
+                val role = db.login(
+                    email,
+                    password
+                )
 
-                if (success) {
+                if (role != null) {
 
                     // 🔥 SESSION
-                    val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                    val sharedPref = context.getSharedPreferences(
+                        "user_session",
+                        Context.MODE_PRIVATE
+                    )
+
                     sharedPref.edit()
                         .putBoolean("isLoggedIn", true)
                         .putString("email", email)
+                        .putString("role", role)
                         .apply()
 
-                    Toast.makeText(context, "Login berhasil 🎉", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Login berhasil 🎉",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-                    navController.navigate("home") {
-                        popUpTo("login") { inclusive = true }
+                    // 🔥 ROLE NAVIGATION
+                    when(role) {
+
+                        "admin" -> {
+                            navController.navigate("home")
+                        }
+
+                        "seller" -> {
+                            navController.navigate("home")
+                        }
+
+                        "buyer" -> {
+                            navController.navigate("home")
+                        }
+
+                        else -> {
+                            navController.navigate("home")
+                        }
                     }
 
                 } else {
-                    Toast.makeText(context, "Email / Password salah", Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        context,
+                        "Email / Password salah",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = YellowPrimary
+            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
+
             Text("Sign In")
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Row {
+
             Text("Don't have an account? ")
+
             Text(
                 text = "Sign Up",
                 color = YellowPrimary,
@@ -110,5 +170,7 @@ fun LoginScreen(navController: NavController) {
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen(navController = rememberNavController())
+    LoginScreen(
+        navController = rememberNavController()
+    )
 }
